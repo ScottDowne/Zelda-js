@@ -1,21 +1,54 @@
-var scale = 1.00, 
-    tile = 32  * scale,
-    direction = 0, // 1: Up 2: Right 3: Down 4: Left
-    tiles = {
-        src: load("img/tilesset.png"),
-        link: load("img/link.png")
-        sand: get(0, 0, 32, 32, this.src),
-        mountains: [
-           get(160, 384, 32, 32, this.src),
-           get(192, 384, 32, 32, this.src),
-           get(192 + 32, 384, 32, 32, this.src),
-           get(160, 384 + 32, 32, 32, this.src),
-           get(192, 384 + 32, 32, 32, this.src),
-           get(192 + 32, 384 + 32, 32, 32, this.src)
-        ], 
-    }
+// 	Processing.js Zelda clone
+/* @pjs preload="img/tileset.png"; preload="img/link.png"; */
 
-var toggle = false;
+var tileSrc = loadImage("img/tileset.png");
+var linkSrc  = loadImage("img/link.png");
+
+var tiles = [get(0,   0,   32, 32, tileSrc), // sand
+             get(160, 384, 32, 32, tileSrc), // mountains
+             get(192, 384, 32, 32, tileSrc),
+             get(224, 384, 32, 32, tileSrc),
+             get(160, 416, 32, 32, tileSrc),
+             get(192, 416, 32, 32, tileSrc),
+             get(224, 416, 32, 32, tileSrc)];
+
+var link = {
+  frame: 0,
+  total: 0,
+  pressed: false,
+  direction: 0, // 0: down, 1: left, 2: up, 3: right
+  x: 32,
+  y: 288,
+  sprites: [
+    [get(0,   0, 32, 32, linkSrc), get(0,   60, 32, 32, linkSrc)], // down
+    [get(60,  0, 32, 32, linkSrc), get(60,  60, 32, 32, linkSrc)], // left
+    [get(120, 0, 32, 32, linkSrc), get(120, 60, 32, 32, linkSrc)], // up
+    [get(180, 0, 32, 32, linkSrc), get(180, 60, 32, 32, linkSrc)]  // right
+  ],
+  animate: function() {
+    if (this.pressed) {
+      if (link.direction === 0) { // down
+        link.y+=1;
+      } else if (link.direction === 1) { // left
+        link.x-=1;
+      } else if (link.direction === 2 && collision[Math.ceil(this.y / 32)-4 - 1][Math.floor(this.x / 32)] === 0 && collision[Math.ceil(this.y / 32)-4 - 1][Math.ceil(this.x / 32)] === 0) { // up
+        link.y-=1;
+      } else if (link.direction === 3) { // right
+        link.x+=1;
+      }
+      mapState[Math.floor(link.y/tile)-4][Math.floor(link.x/tile)] = 1;
+      mapState[Math.ceil(link.y/tile)-4][Math.floor(link.x/tile)] = 1;
+      mapState[Math.floor(link.y/tile)-4][Math.ceil(link.x/tile)] = 1;
+      mapState[Math.ceil(link.y/tile)-4][Math.ceil(link.x/tile)] = 1;
+      this.total++;
+      if (this.total > 10) {
+        this.total = 0;
+        this.frame = (this.frame+1) % 2;
+      }
+    }
+    image(this.sprites[this.direction][this.frame], this.x, this.y);
+  }
+}
 
 var mapTiles = [[5,5,5,5,5,5,5,0,0,5,5,5,5,5,5,5],
                 [5,5,5,5,5,5,6,0,0,5,5,5,5,5,5,5],
@@ -53,34 +86,16 @@ var collision = [[1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1],
                  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
                  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]];
 
-int scale              = 1.00;
-int tile               = 32  * scale;
-int statusScreenWidth  = 256 * 2 * scale;
-int statusScreenHeight = 64 * 2 * scale;
-int zWidth             = 256 * 2 * scale;
-int zHeight            = 176 * 2 * scale;
 
-var up    = false;
-var down  = false;
-var left  = false;
-var right = false;
-var direction = "down";
-var xLoc = 1 * tile;
-var yLoc = 9 * tile;
-var timer = millis();
-var timerStart = 0;
-var timerCur = 0;
-var timerTotal = 0;
-var pressed = false;
+int tile               = 32;
+int statusScreenWidth  = 512;
+int statusScreenHeight = 128;
 
 void setup() {
-  size(width * 2 * scale, height * 2 * scale);
-  background(100);
-  drawStatus();
+  size(width, height);
 }
 
 void draw() {
-    //println(collision[Math.floor(yLoc / 32)-4][Math.floor(xLoc / 32)] + " : " + (Math.floor(yLoc / 32)-4) + " : " + Math.floor(xLoc / 32));
   drawStatus();
   fill(255);
   stroke(0);
@@ -88,225 +103,62 @@ void draw() {
     for (var x = 0, xl = mapTiles[y].length; x < xl; x++) {
       if (mapState[y][x] === 1) {
         mapState[y][x] = 0;
-        if (mapTiles[y][x] === 0) {
-          image(sand, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 1) {
-          image(mountain1, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 2) {
-          image(mountain2, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 3) {
-          image(mountain3, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 4) {
-          image(mountain4, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 5) {
-          image(mountain5, x * tile, (y + 4) * tile);
-        } else if (mapTiles[y][x] === 6) {
-          image(mountain6, x * tile, (y + 4) * tile);
-        }
+        image(tiles[mapTiles[y][x]], x * tile, (y + 4) * tile);
       }
     }
   }
 
-    if (up) {
-      if ((xLoc % 16) === 0) {
-        link = linkUp.display();
-        moveLinkUp();
-        direction = "up";
-      } else {
-        move(direction);
-      }
-    } else if (down) {
-      if ((xLoc % 16) === 0) {
-        link = linkDown.display();
-        moveLinkDown();
-        direction = "down";
-      } else {
-        move(direction);
-      }
-    } else if (left) {
-      if ((yLoc % 16) === 0) {
-        link = linkLeft.display();
-        moveLinkLeft();
-        direction = "left";
-      } else {
-        move(direction);
-      }
-    } else if (right) {
-      if ((yLoc % 16) === 0) {
-        link = linkRight.display();
-        moveLinkRight();
-        direction = "right";
-      } else {
-        move(direction);
-      }
-    }
 
-  image(link, xLoc, yLoc);
+  link.animate();
   fill(255);
   text(frameRate, 15, 20, 70, 70);
 }
 
-void move(direction) {
-  if (direction === "up") {
-    moveLinkUp();
-  } else if (direction ==="down") {
-    moveLinkDown();
-  } else if (direction === "left") {
-    moveLinkLeft();
-  } else if (direction === "right") {
-    moveLinkRight();
-  }
-}
-
+/*
 void moveLinkUp() {
   if (collision[Math.ceil(yLoc / 32)-4 - 1][Math.floor(xLoc / 32)] === 0 && collision[Math.ceil(yLoc / 32)-4 - 1][Math.ceil(xLoc / 32)] === 0) {
     yLoc-=1;
   }
-  
-  timerTotal = (millis() - timerStart); 
-  if (timerCur + timerTotal > 100) {
-    timerTotal = timerCur = 0;
-    pressed = false;
-    timerStart = millis();
-    link = linkUp.animate();
-  }
-  
-  
-  mapState[Math.ceil(yLoc/tile)-4+1][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4+1][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-}
 
 void moveLinkDown() {
   if (collision[Math.floor(yLoc / 32)-4 + 1][Math.floor(xLoc / 32)] === 0 && collision[Math.floor(yLoc / 32)-4 + 1][Math.ceil(xLoc / 32)] === 0) {
     yLoc+=1;
   }
-  
-  timerTotal = (millis() - timerStart); 
-  if (timerCur + timerTotal > 100) {
-    timerTotal = timerCur = 0;
-    pressed = false;
-    timerStart = millis();
-    link = linkDown.animate();
-  }
-  
-  mapState[Math.floor(yLoc/tile)-4-1][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4-1][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-}
 
 void moveLinkLeft() {
   if (collision[Math.ceil(yLoc / 32)-4][Math.ceil(xLoc / 32)-1] === 0 && collision[Math.floor(yLoc / 32)-4 ][Math.ceil(xLoc / 32)-1] === 0) {
     xLoc-=1;
   }
-  
-  timerTotal = (millis() - timerStart); 
-  if (timerCur + timerTotal > 100) {
-    timerTotal = timerCur = 0;
-    pressed = false;
-    timerStart = millis();
-    link = linkLeft.animate();
-  }
-  
-  mapState[Math.ceil(yLoc/tile)-4][Math.ceil(xLoc/tile)+1] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.ceil(xLoc/tile)+1] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-}
+
 
 void moveLinkRight() {
-  xLoc+=1;
-
-  timerTotal = (millis() - timerStart); 
-  if (timerCur + timerTotal > 100) {
-    timerTotal = timerCur = 0;
-    pressed = false;
-    timerStart = millis();
-    link = linkRight.animate();
+  if (collision[Math.ceil(yLoc / 32)-4][Math.floor(xLoc / 32)+1] === 0 && collision[Math.floor(yLoc / 32)-4 ][Math.floor(xLoc / 32)+1] === 0) {
+    xLoc+=1;
   }
-  
-  mapState[Math.ceil(yLoc/tile)-4][Math.floor(xLoc/tile)-1] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.floor(xLoc/tile)-1] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.floor(xLoc/tile)] = 1;
-  mapState[Math.floor(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-  mapState[Math.ceil(yLoc/tile)-4][Math.ceil(xLoc/tile)] = 1;
-}
+*/
 
 void drawStatus() {
   fill(0);
   rect(0, 0, statusScreenWidth, statusScreenHeight);
 }
 
-// Class for animating a sequence of PNGs
-class Animation {
-  PImage[] images;
-  int imageCount;
-  int frame;
-  
-  Animation(int loc, int count) {
-    imageCount = count;
-    images = new PImage[imageCount];
-    images[0]    = get(loc, 0, 32, 32, linkTiles);
-    images[1]    = get(loc, 60, 32, 32, linkTiles);
-  }
-
-  PImage animate() {
-    frame = (frame+1) % imageCount;
-    return images[frame];
-  }
-  
-  PImage display() {
-    return images[frame];
-  }
-}
-
 void keyPressed() {
   if (key === CODED) {
-    if (!pressed) {
-      pressed = true;
-      timerStart = millis();
-    }
-    if (keyCode === UP) {
-      if (!up) {
-        up = true;
-      }
-    } else if (keyCode === DOWN) {
-      if (!down && !up) {
-        down = true;
-      }
+    link.pressed = true;
+    if (keyCode === DOWN) {
+      link.direction = 0;
     } else if (keyCode === LEFT) {
-      if (!left && !down && !up) {
-        left = true;
-      }
+      link.direction = 1;
+    } else if (keyCode === UP) {
+      link.direction = 2;
     } else if (keyCode === RIGHT) {
-      if (!right && !left && !down && !up) {
-        right = true;
-      }
+      link.direction = 3;
     }
   }
 }
 
 void keyReleased() {
   if (key === CODED) {
-    pressed = false;
-    timerCur += millis() - timerStart;
-    if (keyCode === UP) {
-      up = false;
-    } else if (keyCode === DOWN) {
-      down = false;
-    } else if (keyCode === LEFT) {
-      left = false;
-    } else if (keyCode === RIGHT) {
-      right = false;
-    }
+    link.pressed = false;
   }
 }
